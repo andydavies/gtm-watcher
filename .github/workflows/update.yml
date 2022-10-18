@@ -1,0 +1,76 @@
+# Inspired by https://simonwillison.net/2020/Oct/9/git-scraping/
+
+name: Grab a GTM container, check it in to repo and fire webhook if it's changed
+
+# Controls when the workflow will run
+on:
+  workflow_dispatch:
+  schedule:
+#    - cron:  '0 */1 * * *'
+    
+env:
+  # Space separated list of GTM container IDs to check
+  GTM_IDS: GTM-XXX GTM-YYY
+  
+  # ID of SpeedCurve site see https://support.speedcurve.com/reference/get-all-sites-1
+  SPEEDCURVE_SITE_ID: xxxxxx
+
+  # Basic auth details store in a repo secret
+  # See https://support.speedcurve.com/reference/getting-started#basic-authentication
+  SPEEDCURVE_AUTH: ${{ secrets.SPEEDCURVE_AUTH }}
+
+
+jobs:
+  schedule:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Update deps
+        run: |-
+          sudo apt-get update -y
+          sudo apt install nodejs
+          npm install --save-dev --save-exact prettier
+
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        
+      - name: Fetch and reformat containers
+        run: |
+          mkdir -p containers
+          for GTM_ID in ${GTM_IDS[@]}
+          do
+            echo Fetching $GTM_ID
+            wget https://www.googletagmanager.com/gtm.js?id=$GTM_ID -O containers/$GTM_ID.js
+          done
+          npx prettier --write containers/*.js
+          
+      - name: Compare downloaded container version with repo and fire webhook if changed
+        run: |
+          mkdir -p versions
+          for GTM_ID in ${GTM_IDS[@]}
+          do
+            VERSION=$(sed -nr 's/^[[:space:]]+version: "([0-9.]+)",$/\1/p' < containers/$GTM_ID.js)
+            echo $VERSION > versions/$GTM_ID.version.txt
+            
+            if ! git diff --quiet versions/$GTM_ID.version.txt; then
+              NOTE="$GTM_ID v$VERSION" 
+              echo $NOTE
+              curl --request POST \
+                 --url https://api.speedcurve.com/v1/notes \
+                 --header "accept: application/json" \
+                 --header "authorization: $SPEEDCURVE_AUTH" \
+                 --header "content-type: application/x-www-form-urlencoded" \
+                 --data timestamp=now \
+                 --data site_id=$SPEEDCURVE_SITE_ID \
+                 --data "note=$NOTE"
+            fi
+          done
+
+      - name: Commit and push new version
+        run: |-
+          git config user.name "Automated"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          TIMESTAMP=$(date -u)
+          git commit -m "Auto update: ${TIMESTAMP}" || exit 0
+          git push
