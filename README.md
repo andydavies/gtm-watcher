@@ -58,6 +58,10 @@ There will be a false notification the first time the action but this can be del
 
 The action extracts the version number as even though the overall contents of a container seem to remain the same, the order of configuration rules seems non-deterministic and changes from fetch to fetch!
 
+The version numbers are stored in the versions folder, and the containers in containers – both these folders will be created on first run. 
+
+The containers are kept in-case you want to view the raw changes but it's probably easier to use GTM's UI instead
+
 If should be relatively straightforward to change the action to support other webhooks e.g. Slack, or monitor other scripts, although any scripts you want to monitor should have consistent URLs (some experimentation tools generate a filename with a hash in for each revision).
 
 Hopefully one day someone on the GTM team will add support for notifications via WebHooks and make this repo redundant.
