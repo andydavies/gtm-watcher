@@ -6,7 +6,7 @@ Add a note to a SpeedCurve site when a GTM container is changed
 
 ## Background
 
-Although Google Tag Manager (GTM) can send notifications when a container is change, it only supports email so can't send a notifcation to SpeedCurve, Slack or other applications that support WebHooks.
+Although Google Tag Manager (GTM) can send notifications when a container is changed, it only supports email so can't send a notifcation to SpeedCurve, Slack or other applications that support WebHooks.
 
 GTM Watcher regularly fetches one or more GTM containers and if a container's version has changed it adds a note to SpeedCurve via the API.
 
